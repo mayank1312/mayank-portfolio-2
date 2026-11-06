@@ -6,12 +6,26 @@ const pg=(location.pathname.split('/').pop()||'index').replace('.html','');
 $$('.nv a').forEach(a=>a.classList.toggle('on',a.getAttribute('href').replace('.html','')==pg));
 document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(!a||a.target||/^(http|mailto|#)|\.pdf$/.test(a.getAttribute('href'))||e.metaKey||e.ctrlKey)return;e.preventDefault();document.body.classList.add('out');setTimeout(()=>location.href=a.href,260)});
 
-/* ---- reveal on load / scroll ---- */
-const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}}),{threshold:.12});
-function reveal(){let i=0;$$('.b').forEach(e=>{if(e.getBoundingClientRect().top<innerHeight*.92)setTimeout(()=>e.classList.add('on'),i++*90);else io.observe(e)})}
-document.fonts.ready.then(()=>setTimeout(reveal,120));
+/* ---- cursors that build each page (intro only; they leave when done) ---- */
+let skip=false,ready=false,seen=0;try{seen=sessionStorage.seen;sessionStorage.seen=1}catch(e){}
+const F=seen?.55:1,sleep=ms=>skip?Promise.resolve():new Promise(r=>setTimeout(r,ms*F));
+const NAMES=['hero.jsx','css_wizard','gpt-agent','git_push','bug_hunter','ship_it','vibe.py'],COL=['#f43f5e','#3347e6','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ec4899'];
+function mv(c,x,y,d=.9){c.el.style.transitionDuration=d+'s,.4s';c.el.style.transform=`translate(${x}px,${y}px)`}
+const C=NAMES.map((n,i)=>{const el=document.createElement('div');el.className='cur';el.innerHTML=`<svg viewBox="0 0 20 20"><path d="M2 2l6 16 2.5-6.5L17 9z" fill="${COL[i]}" stroke="#000" stroke-width="1"/></svg><b style="background:${COL[i]}">${n}</b>`;document.body.append(el);const c={el,n,busy:false};mv(c,Math.random()*innerWidth,Math.random()<.5?-60:innerHeight+60,0);return c});
+async function build(el,c){c.busy=true;const r=el.getBoundingClientRect();mv(c,r.left+Math.min(r.width*.3,80),r.top+6,.8*F+Math.random()*.4);await sleep(850);
+  if(!skip){const s=document.createElement('div');s.className='sel';Object.assign(s.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});s.innerHTML=`<i>${c.n} · ${el.tagName.toLowerCase()}</i>`;document.body.append(s);mv(c,r.right-8,r.bottom-4,.55*F);await sleep(560);el.classList.add('on');await sleep(360);s.remove()}
+  el.classList.add('on');c.busy=false}
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);const c=C.find(c=>!c.busy);c&&!skip&&!done?build(e.target,c):e.target.classList.add('on')}),{threshold:.2});
+let done=false;
+function bye(){if(done)return;done=true;C.forEach((c,i)=>{c.busy=false;mv(c,i%2?-80:innerWidth+80,innerHeight*(.15+i*.12),.9);c.el.style.opacity=0;setTimeout(()=>c.el.remove(),1100)})}
+function finish(){skip=true;$$('.b').forEach(e=>e.classList.add('on'));$$('.sel').forEach(s=>s.remove());$('#skip')&&$('#skip').remove();ready=true;bye()}
+async function intro(){const all=$$('.b'),q=all.filter(e=>e.getBoundingClientRect().top<innerHeight*.9);all.filter(e=>!q.includes(e)).forEach(e=>io.observe(e));
+  await Promise.all(C.map(async(c,i)=>{await sleep(i*200);while(q.length&&!skip)await build(q.shift(),c)}));
+  if(!skip&&!seen){const cx=innerWidth/2,cy=innerHeight/2,t0=performance.now();await new Promise(res=>{(function f(t){const k=(t-t0)/1500;C.forEach((c,i)=>{const a=k*7+i/C.length*6.283;mv(c,cx+Math.cos(a)*110,cy+Math.sin(a)*110,.25)});k<1&&!skip?requestAnimationFrame(f):res()})(t0)})}
+  $('#skip')&&$('#skip').remove();ready=true;bye()}
+const sk=document.createElement('button');sk.id='skip';sk.textContent='skip intro ▸';sk.onclick=finish;document.body.append(sk);
 addEventListener('pointermove',e=>{R.style.setProperty('--px',(e.clientX/innerWidth-.5)*2);R.style.setProperty('--py',(e.clientY/innerHeight-.5)*2)});
-
+document.fonts.ready.then(()=>setTimeout(intro,250));
 
 /* ---- interactions ---- */
 $$('.card').forEach(c=>{c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;c.style.transform=`perspective(800px) rotateX(${(y/r.height-.5)*-4}deg) rotateY(${(x/r.width-.5)*5}deg)`});c.addEventListener('pointerleave',()=>c.style.transform='')});
@@ -63,6 +77,7 @@ def('rm','',a=>/-rf/.test(a.join(' '))?'<span class=e>rm: permission denied</spa
 def('hack','',async()=>{for(const l of['Bypassing firewall…','Injecting payload…','Decrypting… ▓▓▓▓▓▓▓▒▒▒','Access granted.'])print(`<span class=ok>${l}</span>`),await wait(380);return'…just kidding. This is a portfolio. 😄'});
 def('sudo','',async a=>{if(a.join(' ')!=='hire mayank')return'guest is not in the sudoers file. This incident will be reported 🚨';for(let i=1;i<=10;i++){print('<span class=ok>'+'█'.repeat(i)+'░'.repeat(10-i)+`</span> verifying skills ${i*10}%`);i>1&&out.lastChild.previousSibling.remove();await wait(160)}setTimeout(()=>location.href='contact.html',1200);return'<span class=ok>ACCESS GRANTED ✔</span> offer letter drafted… opening contact page ↗'});
 def('history','',()=>hist.map((h,i)=>` ${i+1}  ${esc(h)}`).join('\n')||'(empty)');
+def('konami','',()=>{R.style.setProperty('--lime','hsl('+(Math.random()*360|0)+' 90% 65%)');return'🎮 +30 lives. Random accent engaged.'});
 def('clear','clear screen',()=>{out.innerHTML='';return''});
 def('exit','',()=>'there is no escape. only more portfolio. 🌀');
 async function run(l){print(`${PS} ${esc(l)}`);if(!l.trim())return;hist.push(l);hi=hist.length;const[c,...a]=l.trim().split(/\s+/),f=cmds[c.toLowerCase()];if(!f){print(`<span class=e>command not found:</span> ${esc(c)} — try <b>help</b>`);return}const r=await f.f(a,l);r&&print(r)}
@@ -70,7 +85,7 @@ inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const v=inp.value;inp.val
 print('<b>Mayank-OS 2.0</b> — welcome, guest. Type <span class=p>help</span> or tap a command below.');
 $('#chp').innerHTML=['help','about','skills','projects','awards','neofetch','theme','matrix','fortune','sudo hire mayank'].map(c=>`<button class="ch">${c}</button>`).join('');
 $$('#chp button').forEach(b=>b.onclick=()=>run(b.textContent));
-}
+let kk=[];addEventListener('keydown',e=>{if(e.target===inp)return;kk.push(e.key);kk=kk.slice(-10);kk.join('')==='ArrowUpArrowUpArrowDownArrowDownArrowLeftArrowRightArrowLeftArrowRightba'&&run('konami')})}
 
 /* ---- signature cursor (the lime-core disc from the logo) + dock magnification ---- */
 (()=>{
